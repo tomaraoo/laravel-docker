@@ -3,7 +3,7 @@
     "name": "rft/laravel-docker",
     "description": "Zero-file Docker runtime (PHP 8.5 + Apache) and Composer commands for Laravel applications.",
     "type": "composer-plugin",
-    "license": "MIT",
+    "license": "proprietary",
     "keywords": [
         "laravel",
         "docker",

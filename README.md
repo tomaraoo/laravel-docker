@@ -225,3 +225,10 @@ git push -u origin main
 git tag v1.0.0
 git push origin v1.0.0
 ```
+
+---
+
+## License
+
+Proprietary — Copyright (c) 2026 RFT. All rights reserved. See [LICENSE](LICENSE).
+
