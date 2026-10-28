@@ -7,15 +7,15 @@ namespace Rft\LaravelDocker\Support;
 use Closure;
 use InvalidArgumentException;
 
-final class BrowserOpener
+final readonly class BrowserOpener
 {
     /**
      * @param  (Closure(string): bool)|null  $binaryExistsResolver
      */
     public function __construct(
-        private readonly string $osFamily = PHP_OS_FAMILY,
-        private readonly ?bool $isWslOverride = null,
-        private readonly ?Closure $binaryExistsResolver = null,
+        private string $osFamily = PHP_OS_FAMILY,
+        private ?bool $isWslOverride = null,
+        private ?Closure $binaryExistsResolver = null,
     ) {}
 
     /**
@@ -25,7 +25,7 @@ final class BrowserOpener
      */
     public function buildCommand(string $url): array
     {
-        $trimmedUrl = trim($url);
+        $trimmedUrl = mb_trim($url);
 
         if (preg_match('#^https?://[^\s]+$#i', $trimmedUrl) !== 1) {
             throw new InvalidArgumentException(sprintf('Invalid browser URL [%s].', $url));
@@ -149,18 +149,17 @@ final class BrowserOpener
             return false;
         }
 
-        foreach (explode(PATH_SEPARATOR, $pathEnv) as $directory) {
-            if ($directory === '') {
-                continue;
+        return array_any(
+            explode(PATH_SEPARATOR, $pathEnv),
+            static function (string $directory) use ($binary): bool {
+                if ($directory === '') {
+                    return false;
+                }
+
+                $candidate = rtrim($directory, '/\\').DIRECTORY_SEPARATOR.$binary;
+
+                return is_file($candidate) && is_executable($candidate);
             }
-
-            $candidate = rtrim($directory, '/\\').DIRECTORY_SEPARATOR.$binary;
-
-            if (is_file($candidate) && is_executable($candidate)) {
-                return true;
-            }
-        }
-
-        return false;
+        );
     }
 }

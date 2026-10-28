@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace Rft\LaravelDocker\Composer;
 
-final class ComposerScriptsInjector
+use NoDiscard;
+
+final readonly class ComposerScriptsInjector
 {
-    public const PACKAGE_NAME = 'rft/laravel-docker';
+    public const string PACKAGE_NAME = 'rft/laravel-docker';
 
     /**
      * Return the canonical Composer scripts registered by this package.
      *
      * @return array<string, list<string>|string>
      */
+    #[NoDiscard]
     public function defaultScripts(): array
     {
         return [
@@ -58,17 +61,13 @@ final class ComposerScriptsInjector
 
         $rawJson = file_get_contents($composerJsonPath);
 
-        if ($rawJson === false) {
+        if ($rawJson === false || ! json_validate($rawJson)) {
             return ['updated' => false, 'added' => []];
         }
 
         $decoded = json_decode($rawJson, true);
 
-        if (! is_array($decoded)) {
-            return ['updated' => false, 'added' => []];
-        }
-
-        if (($decoded['name'] ?? null) === self::PACKAGE_NAME) {
+        if (! is_array($decoded) || ($decoded['name'] ?? null) === self::PACKAGE_NAME) {
             return ['updated' => false, 'added' => []];
         }
 
@@ -129,12 +128,14 @@ final class ComposerScriptsInjector
             return false;
         }
 
-        $lines = array_map('trim', preg_split('/\R/', $contents) ?: []);
+        $lines = array_map(mb_trim(...), preg_split('/\R/', $contents) ?: []);
+        $alreadyIgnored = array_any(
+            $lines,
+            static fn (string $line): bool => in_array($line, ['.env.local', '/.env.local', '.env.*', '/.env.*', '.env*'], true)
+        );
 
-        foreach ($lines as $line) {
-            if ($line === '.env.local' || $line === '/.env.local' || $line === '.env.*' || $line === '/.env.*' || $line === '.env*') {
-                return false;
-            }
+        if ($alreadyIgnored) {
+            return false;
         }
 
         $separator = ($contents !== '' && ! str_ends_with($contents, "\n")) ? PHP_EOL : '';

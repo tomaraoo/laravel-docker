@@ -21,7 +21,7 @@ All Docker configuration (`Dockerfile`, `vhost.conf`, `entrypoint.sh`, and `dock
 ## Requirements
 
 - Docker Engine & Docker Compose v2 (`docker compose`)
-- PHP `^8.2` (for Composer CLI)
+- PHP `^8.5` (for Composer CLI)
 - Laravel `11.x`, `12.x`, or `13.x`
 
 ---

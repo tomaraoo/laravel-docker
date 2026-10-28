@@ -41,7 +41,7 @@ enum DockerEnvironment: string
             return null;
         }
 
-        $normalized = mb_strtolower(trim($value));
+        $normalized = $value |> mb_trim(...) |> mb_strtolower(...);
 
         return match ($normalized) {
             'local', 'dev', 'development' => self::Local,

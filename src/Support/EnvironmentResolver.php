@@ -6,10 +6,10 @@ namespace Rft\LaravelDocker\Support;
 
 use Rft\LaravelDocker\Enums\DockerEnvironment;
 
-final class EnvironmentResolver
+final readonly class EnvironmentResolver
 {
     public function __construct(
-        private readonly EnvFileParser $parser = new EnvFileParser,
+        private EnvFileParser $parser = new EnvFileParser,
     ) {}
 
     /**
@@ -126,9 +126,11 @@ final class EnvironmentResolver
 
     private function slugifyComposeName(string $rawName): string
     {
-        $lower = mb_strtolower(trim($rawName));
-        $slug = (string) preg_replace('/[^a-z0-9]+/', '-', $lower);
-        $slug = trim($slug, '-');
+        $slug = $rawName
+            |> mb_trim(...)
+            |> mb_strtolower(...)
+            |> (static fn (string $value): string => (string) preg_replace('/[^a-z0-9]+/', '-', $value))
+            |> (static fn (string $value): string => trim($value, '-'));
 
         if ($slug === '' || preg_match('/^[a-z0-9]/', $slug) !== 1) {
             return 'laravel-app';
@@ -153,8 +155,8 @@ final class EnvironmentResolver
 
         if (str_contains($appPort, ':')) {
             $segments = explode(':', $appPort);
-            $port = (string) array_pop($segments);
-            $candidateHost = implode(':', $segments);
+            $port = (string) array_last($segments);
+            $candidateHost = implode(':', array_slice($segments, 0, -1));
 
             if ($candidateHost !== '' && $candidateHost !== '0.0.0.0' && $candidateHost !== '[::]') {
                 $host = $candidateHost;
@@ -274,7 +276,7 @@ final class EnvironmentResolver
             return null;
         }
 
-        $trimmed = trim($value);
+        $trimmed = mb_trim($value);
 
         return $trimmed === '' ? null : $trimmed;
     }

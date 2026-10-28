@@ -8,13 +8,12 @@ it('injects all docker scripts while preserving two-space json indentation', fun
     $tempFile = sys_get_temp_dir().'/composer-indent-'.uniqid('', true).'.json';
     file_put_contents($tempFile, "{\n  \"name\": \"acme/two-space-app\",\n  \"scripts\": {\n    \"lint\": \"pint\"\n  }\n}\n");
 
-    $injector = new ComposerScriptsInjector;
-    $result = $injector->inject($tempFile);
+    $result = new ComposerScriptsInjector()->inject($tempFile);
     $written = (string) file_get_contents($tempFile);
     unlink($tempFile);
 
     expect($result['updated'])->toBeTrue();
-    expect($result['added'])->toContain('docker:build', 'docker:up', 'docker:run', 'docker:down-v', 'docker:open');
+    expect($result['added'])->toContain('docker:build', 'docker:up', 'docker:run', 'docker:down-v', 'docker:artisan', 'docker:open');
     expect($written)->toContain("\n  \"scripts\": {\n    \"lint\": \"pint\",\n    \"docker:build\": [");
 });
 
@@ -22,8 +21,7 @@ it('skips injecting scripts into the rft/laravel-docker package itself', functio
     $tempFile = sys_get_temp_dir().'/composer-self-'.uniqid('', true).'.json';
     file_put_contents($tempFile, json_encode(['name' => 'rft/laravel-docker'], JSON_PRETTY_PRINT));
 
-    $injector = new ComposerScriptsInjector;
-    $result = $injector->inject($tempFile);
+    $result = new ComposerScriptsInjector()->inject($tempFile);
     unlink($tempFile);
 
     expect($result)->toBe(['updated' => false, 'added' => []]);

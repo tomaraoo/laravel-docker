@@ -6,17 +6,18 @@ namespace Rft\LaravelDocker\Support;
 
 use Closure;
 use InvalidArgumentException;
+use NoDiscard;
 use Rft\LaravelDocker\Enums\DockerEnvironment;
 
-final class DockerComposeRunner
+final readonly class DockerComposeRunner
 {
     /**
      * @param  (Closure(list<string>, array<string, string>, string): int)|null  $processExecutor
      */
     public function __construct(
-        private readonly EnvironmentResolver $environmentResolver = new EnvironmentResolver,
-        private readonly BrowserOpener $browserOpener = new BrowserOpener,
-        private readonly ?Closure $processExecutor = null,
+        private EnvironmentResolver $environmentResolver = new EnvironmentResolver,
+        private BrowserOpener $browserOpener = new BrowserOpener,
+        private ?Closure $processExecutor = null,
     ) {}
 
     /**
@@ -32,8 +33,7 @@ final class DockerComposeRunner
      */
     public function parseArguments(array $argv): array
     {
-        $args = $argv;
-        array_shift($args);
+        $args = array_slice($argv, 1);
 
         $action = 'help';
         $explicitEnvironment = null;
@@ -117,6 +117,7 @@ final class DockerComposeRunner
      *     compose_env: array<string, string>
      * }
      */
+    #[NoDiscard]
     public function plan(string $projectRoot, string $dockerDirectory, array $argv): array
     {
         $parsed = $this->parseArguments($argv);
@@ -139,19 +140,11 @@ final class DockerComposeRunner
                 'compose',
                 '--project-name',
                 $resolved['project_name'],
+                ...($resolved['env_file'] !== null ? ['--env-file', $resolved['env_file']] : []),
+                '-f',
+                $resolved['compose_file'],
+                ...$subcommand,
             ];
-
-            if ($resolved['env_file'] !== null) {
-                $command[] = '--env-file';
-                $command[] = $resolved['env_file'];
-            }
-
-            $command[] = '-f';
-            $command[] = $resolved['compose_file'];
-
-            foreach ($subcommand as $part) {
-                $command[] = $part;
-            }
         }
 
         return [
@@ -268,11 +261,12 @@ final class DockerComposeRunner
      */
     private function buildUpArgs(array $extraArgs): array
     {
-        if (in_array('-d', $extraArgs, true) || in_array('--detach', $extraArgs, true) || in_array('--abort-on-container-exit', $extraArgs, true)) {
-            return ['up', ...$extraArgs];
-        }
+        $hasExplicitMode = array_any(
+            ['-d', '--detach', '--abort-on-container-exit'],
+            static fn (string $flag): bool => in_array($flag, $extraArgs, true)
+        );
 
-        return ['up', '-d', ...$extraArgs];
+        return $hasExplicitMode ? ['up', ...$extraArgs] : ['up', '-d', ...$extraArgs];
     }
 
     /**
@@ -281,7 +275,9 @@ final class DockerComposeRunner
      */
     private function buildRunArgs(array $extraArgs): array
     {
-        if ($extraArgs === [] || str_starts_with($extraArgs[0], '-')) {
+        $firstArg = array_first($extraArgs);
+
+        if ($firstArg === null || str_starts_with($firstArg, '-')) {
             return ['up', ...$extraArgs];
         }
 
@@ -294,11 +290,12 @@ final class DockerComposeRunner
      */
     private function buildDownVolumesArgs(array $extraArgs): array
     {
-        if (in_array('-v', $extraArgs, true) || in_array('--volumes', $extraArgs, true)) {
-            return ['down', ...$extraArgs];
-        }
+        $hasVolumeFlag = array_any(
+            ['-v', '--volumes'],
+            static fn (string $flag): bool => in_array($flag, $extraArgs, true)
+        );
 
-        return ['down', '-v', ...$extraArgs];
+        return $hasVolumeFlag ? ['down', ...$extraArgs] : ['down', '-v', ...$extraArgs];
     }
 
     /**
@@ -307,7 +304,12 @@ final class DockerComposeRunner
      */
     private function buildLogsArgs(array $extraArgs): array
     {
-        if (in_array('-f', $extraArgs, true) || in_array('--follow', $extraArgs, true) || in_array('--no-follow', $extraArgs, true)) {
+        $hasExplicitFollow = array_any(
+            ['-f', '--follow', '--no-follow'],
+            static fn (string $flag): bool => in_array($flag, $extraArgs, true)
+        );
+
+        if ($hasExplicitFollow) {
             $filtered = array_values(array_filter($extraArgs, static fn (string $arg): bool => $arg !== '--no-follow'));
 
             return ['logs', ...$filtered];
@@ -321,10 +323,12 @@ final class DockerComposeRunner
      */
     private function formatCommand(array $command): string
     {
-        return implode(' ', array_map(
-            static fn (string $part): string => preg_match('/^[A-Za-z0-9_\/.:=-]+$/', $part) === 1 ? $part : escapeshellarg($part),
-            $command
-        ));
+        return $command
+            |> (static fn (array $parts): array => array_map(
+                static fn (string $part): string => preg_match('/^[A-Za-z0-9_\/.:=-]+$/', $part) === 1 ? $part : escapeshellarg($part),
+                $parts
+            ))
+            |> (static fn (array $escaped): string => implode(' ', $escaped));
     }
 
     /**

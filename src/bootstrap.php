@@ -12,12 +12,11 @@ use Rft\LaravelDocker\Support\EnvFileParser;
 
     $cliArgs = $_SERVER['argv'] ?? [];
 
-    if (is_array($cliArgs)) {
-        foreach ($cliArgs as $cliArg) {
-            if (is_string($cliArg) && ($cliArg === '--env' || str_starts_with($cliArg, '--env='))) {
-                return;
-            }
-        }
+    if (is_array($cliArgs) && array_any(
+        $cliArgs,
+        static fn (mixed $arg): bool => is_string($arg) && ($arg === '--env' || str_starts_with($arg, '--env='))
+    )) {
+        return;
     }
 
     $existingAppEnv = getenv('APP_ENV');
@@ -49,8 +48,8 @@ use Rft\LaravelDocker\Support\EnvFileParser;
     $envDefaultPath = $projectRoot.'/.env';
 
     if (is_file($envDefaultPath)) {
-        $defaultVars = (new EnvFileParser)->parseFile($envDefaultPath);
-        $configuredEnv = mb_strtolower(trim($defaultVars['APP_ENV'] ?? ''));
+        $defaultVars = new EnvFileParser()->parseFile($envDefaultPath);
+        $configuredEnv = ($defaultVars['APP_ENV'] ?? '') |> mb_trim(...) |> mb_strtolower(...);
 
         if ($configuredEnv !== '' && ! in_array($configuredEnv, ['local', 'dev', 'development'], true)) {
             return;

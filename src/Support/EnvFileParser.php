@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Rft\LaravelDocker\Support;
 
-final class EnvFileParser
+final readonly class EnvFileParser
 {
     /**
      * Parse a dotenv-formatted file into key-value string pairs.
@@ -37,14 +37,14 @@ final class EnvFileParser
         $lines = preg_split('/\R/', $contents) ?: [];
 
         foreach ($lines as $rawLine) {
-            $line = trim($rawLine);
+            $line = mb_trim($rawLine);
 
             if ($line === '' || str_starts_with($line, '#')) {
                 continue;
             }
 
             if (str_starts_with($line, 'export ')) {
-                $line = trim(substr($line, 7));
+                $line = mb_trim(substr($line, 7));
             }
 
             $equalsPosition = strpos($line, '=');
@@ -53,13 +53,13 @@ final class EnvFileParser
                 continue;
             }
 
-            $key = trim(substr($line, 0, $equalsPosition));
+            $key = mb_trim(substr($line, 0, $equalsPosition));
 
             if ($key === '' || preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $key) !== 1) {
                 continue;
             }
 
-            $rawValue = trim(substr($line, $equalsPosition + 1));
+            $rawValue = mb_trim(substr($line, $equalsPosition + 1));
             $variables[$key] = $this->normalizeValue($rawValue, $variables);
         }
 
@@ -75,24 +75,24 @@ final class EnvFileParser
             return '';
         }
 
-        $firstChar = $rawValue[0];
-        $lastChar = $rawValue[strlen($rawValue) - 1];
-
-        if ($firstChar === "'" && $lastChar === "'" && strlen($rawValue) >= 2) {
+        if (str_starts_with($rawValue, "'") && str_ends_with($rawValue, "'") && strlen($rawValue) >= 2) {
             return substr($rawValue, 1, -1);
         }
 
-        if ($firstChar === '"' && $lastChar === '"' && strlen($rawValue) >= 2) {
-            $unquoted = substr($rawValue, 1, -1);
-            $unquoted = str_replace(['\\n', '\\r', '\\t', '\\"', '\\\\'], ["\n", "\r", "\t", '"', '\\'], $unquoted);
-
-            return $this->interpolate($unquoted, $resolvedVariables);
+        if (str_starts_with($rawValue, '"') && str_ends_with($rawValue, '"') && strlen($rawValue) >= 2) {
+            return substr($rawValue, 1, -1)
+                |> (static fn (string $value): string => str_replace(
+                    ['\\n', '\\r', '\\t', '\\"', '\\\\'],
+                    ["\n", "\r", "\t", '"', '\\'],
+                    $value
+                ))
+                |> (fn (string $value): string => $this->interpolate($value, $resolvedVariables));
         }
 
         $commentPosition = strpos($rawValue, ' #');
 
         if ($commentPosition !== false) {
-            $rawValue = rtrim(substr($rawValue, 0, $commentPosition));
+            $rawValue = mb_rtrim(substr($rawValue, 0, $commentPosition));
         }
 
         return $this->interpolate($rawValue, $resolvedVariables);

@@ -71,7 +71,7 @@ it('switches run between foreground stack and one-off service container based on
     unlink($projectDir.'/.env.local');
     rmdir($projectDir);
 
-    expect(array_slice($foregroundPlan['command'], -1))->toBe(['up']);
+    expect(array_last($foregroundPlan['command']))->toBe('up');
     expect(array_slice($serviceRunPlan['command'], -6))->toBe(['run', '--rm', 'app', 'php', 'artisan', 'migrate']);
 });
 

@@ -5,9 +5,7 @@ declare(strict_types=1);
 use Rft\LaravelDocker\Support\EnvFileParser;
 
 it('parses quoted, exported, interpolated, and inline-commented dotenv entries', function () {
-    $parser = new EnvFileParser;
-
-    $parsed = $parser->parseString(<<<'ENV'
+    $parsed = new EnvFileParser()->parseString(<<<'ENV'
 # Comment line
 APP_NAME="My Portal"
 export APP_ENV=local

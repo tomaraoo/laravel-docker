@@ -11,19 +11,23 @@ use Composer\IO\IOInterface;
 use Composer\Plugin\PluginInterface;
 use Composer\Script\Event;
 use Composer\Script\ScriptEvents;
+use Override;
 
-final class DockerPlugin implements EventSubscriberInterface, PluginInterface
+final readonly class DockerPlugin implements EventSubscriberInterface, PluginInterface
 {
+    #[Override]
     public function activate(Composer $composer, IOInterface $io): void
     {
         // Event listeners handle script injection after install/update finishes.
     }
 
+    #[Override]
     public function deactivate(Composer $composer, IOInterface $io): void
     {
         // No cleanup needed on deactivation.
     }
 
+    #[Override]
     public function uninstall(Composer $composer, IOInterface $io): void
     {
         // Leave root composer.json untouched during active `composer remove` write cycle.
@@ -32,6 +36,7 @@ final class DockerPlugin implements EventSubscriberInterface, PluginInterface
     /**
      * @return array<string, string>
      */
+    #[Override]
     public static function getSubscribedEvents(): array
     {
         return [

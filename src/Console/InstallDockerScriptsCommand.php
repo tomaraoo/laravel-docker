@@ -59,13 +59,10 @@ final class InstallDockerScriptsCommand extends Command
             return;
         }
 
-        $sourcePath = null;
-
-        if (is_file($basePath.'/.env')) {
-            $sourcePath = $basePath.'/.env';
-        } elseif (is_file($basePath.'/.env.example')) {
-            $sourcePath = $basePath.'/.env.example';
-        }
+        $sourcePath = array_find(
+            [$basePath.'/.env', $basePath.'/.env.example'],
+            static fn (string $candidate): bool => is_file($candidate)
+        );
 
         if ($sourcePath === null) {
             $this->components->warn('Neither .env nor .env.example was found to seed .env.local.');
@@ -73,13 +70,13 @@ final class InstallDockerScriptsCommand extends Command
             return;
         }
 
-        $contents = (string) file_get_contents($sourcePath);
-        $contents = preg_replace('/^DB_CONNECTION=sqlite$/m', 'DB_CONNECTION=mysql', $contents) ?? $contents;
-        $contents = preg_replace('/^#\s*DB_HOST=127\.0\.0\.1$/m', 'DB_HOST=127.0.0.1', $contents) ?? $contents;
-        $contents = preg_replace('/^#\s*DB_PORT=3306$/m', 'DB_PORT=33060', $contents) ?? $contents;
-        $contents = preg_replace('/^#\s*DB_DATABASE=(.+)$/m', 'DB_DATABASE=$1', $contents) ?? $contents;
-        $contents = preg_replace('/^#\s*DB_USERNAME=(.+)$/m', 'DB_USERNAME=$1', $contents) ?? $contents;
-        $contents = preg_replace('/^#\s*DB_PASSWORD=.*$/m', 'DB_PASSWORD=secret', $contents) ?? $contents;
+        $contents = (string) file_get_contents($sourcePath)
+            |> (static fn (string $env): string => preg_replace('/^DB_CONNECTION=sqlite$/m', 'DB_CONNECTION=mysql', $env) ?? $env)
+            |> (static fn (string $env): string => preg_replace('/^#\s*DB_HOST=127\.0\.0\.1$/m', 'DB_HOST=127.0.0.1', $env) ?? $env)
+            |> (static fn (string $env): string => preg_replace('/^#\s*DB_PORT=3306$/m', 'DB_PORT=33060', $env) ?? $env)
+            |> (static fn (string $env): string => preg_replace('/^#\s*DB_DATABASE=(.+)$/m', 'DB_DATABASE=$1', $env) ?? $env)
+            |> (static fn (string $env): string => preg_replace('/^#\s*DB_USERNAME=(.+)$/m', 'DB_USERNAME=$1', $env) ?? $env)
+            |> (static fn (string $env): string => preg_replace('/^#\s*DB_PASSWORD=.*$/m', 'DB_PASSWORD=secret', $env) ?? $env);
 
         if (! str_contains($contents, 'DOCKER_APP_PORT=')) {
             $separator = ($contents !== '' && ! str_ends_with($contents, "\n")) ? PHP_EOL : '';
