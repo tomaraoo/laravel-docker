@@ -1,0 +1,44 @@
+{
+    "$schema": "https://getcomposer.org/schema.json",
+    "name": "rft/laravel-docker",
+    "description": "Zero-file Docker runtime (PHP 8.5 + Apache) and Composer commands for Laravel applications.",
+    "type": "composer-plugin",
+    "license": "MIT",
+    "keywords": [
+        "laravel",
+        "docker",
+        "docker-compose",
+        "apache",
+        "php85"
+    ],
+    "require": {
+        "php": "^8.2",
+        "composer-plugin-api": "^2.0",
+        "illuminate/console": "^11.0|^12.0|^13.0",
+        "illuminate/support": "^11.0|^12.0|^13.0"
+    },
+    "bin": [
+        "bin/laravel-docker"
+    ],
+    "autoload": {
+        "psr-4": {
+            "Rft\\LaravelDocker\\": "src/"
+        },
+        "files": [
+            "src/bootstrap.php"
+        ]
+    },
+    "extra": {
+        "class": "Rft\\LaravelDocker\\Composer\\DockerPlugin",
+        "laravel": {
+            "providers": [
+                "Rft\\LaravelDocker\\LaravelDockerServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

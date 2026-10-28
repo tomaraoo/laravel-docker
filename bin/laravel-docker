@@ -1,0 +1,47 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Rft\LaravelDocker\Support\DockerComposeRunner;
+
+$autoloadPath = $GLOBALS['_composer_autoload_path'] ?? null;
+$projectRoot = null;
+
+if (is_string($autoloadPath) && is_file($autoloadPath)) {
+    $resolvedAutoload = realpath($autoloadPath) ?: $autoloadPath;
+    require_once $resolvedAutoload;
+    $projectRoot = dirname($resolvedAutoload, 2);
+} else {
+    $cwd = getcwd();
+    $candidates = array_filter([
+        $cwd !== false ? $cwd.'/vendor/autoload.php' : null,
+        dirname(__DIR__, 3).'/autoload.php',
+        dirname(__DIR__).'/vendor/autoload.php',
+    ]);
+
+    foreach ($candidates as $candidate) {
+        if (is_file($candidate)) {
+            $resolvedCandidate = realpath($candidate) ?: $candidate;
+            require_once $resolvedCandidate;
+            $projectRoot = dirname($resolvedCandidate, 2);
+            break;
+        }
+    }
+}
+
+if ($projectRoot === null) {
+    fwrite(STDERR, '[laravel-docker] Unable to locate Composer autoloader.'.PHP_EOL);
+    exit(1);
+}
+
+$dockerDirectory = dirname(__DIR__).'/docker';
+
+try {
+    $runner = new DockerComposeRunner;
+    $exitCode = $runner->run($projectRoot, $dockerDirectory, array_values($argv));
+    exit($exitCode);
+} catch (Throwable $exception) {
+    fwrite(STDERR, sprintf('[laravel-docker] Error: %s%s', $exception->getMessage(), PHP_EOL));
+    exit(1);
+}

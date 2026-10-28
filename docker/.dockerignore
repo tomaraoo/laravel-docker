@@ -1,0 +1,7 @@
+# The MOUNT-approach build needs ONLY the Dockerfile, vhost.conf, and entrypoint.sh.
+# The Laravel app tree (code, vendor/, storage/, .env*) is bind-mounted at /app at runtime.
+*
+
+!Dockerfile
+!vhost.conf
+!entrypoint.sh

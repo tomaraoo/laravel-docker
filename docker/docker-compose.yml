@@ -1,0 +1,58 @@
+# ===========================================================================
+# Laravel DEVELOPMENT Compose — runs on a developer's LOCAL machine.
+#
+# Credentials and ports are read from the consuming project's .env.local file.
+# MOUNT approach: host Laravel project is bind-mounted at /app.
+# ===========================================================================
+services:
+  app:
+    image: ${COMPOSE_PROJECT_NAME:-laravel-app}:php85-dev
+    build:
+      context: ${LARAVEL_DOCKER_CONTEXT:-.}
+      dockerfile: Dockerfile
+      args:
+        HOST_UID: "${HOST_UID:-1000}"
+        HOST_GID: "${HOST_GID:-1000}"
+        HOST_EXTRA_GID: "${HOST_EXTRA_GID:-33}"
+    container_name: ${COMPOSE_PROJECT_NAME:-laravel-app}-dev
+    restart: unless-stopped
+    ports:
+      - "${DOCKER_APP_PORT:-8080}:80"
+    volumes:
+      - ${APP_CODE_PATH:-.}:/app
+    environment:
+      APP_ENV: "${DOCKER_LARAVEL_ENV:-local}"
+      PHP_USER_ID: "${HOST_UID:-1000}"
+      PHP_GROUP_ID: "${HOST_GID:-1000}"
+      DB_HOST: "${DOCKER_DB_HOST:-db}"
+      DB_PORT: "${DOCKER_INTERNAL_DB_PORT:-3306}"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: ${DOCKER_DB_IMAGE:-mysql:8.0}
+    container_name: ${COMPOSE_PROJECT_NAME:-laravel-app}-dev-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_ROOT_PASSWORD: "${DOCKER_MYSQL_ROOT_PASSWORD:-secret}"
+      MYSQL_DATABASE: "${DOCKER_MYSQL_DATABASE:-laravel}"
+      MYSQL_USER: "${DOCKER_MYSQL_USER:-laravel}"
+      MYSQL_PASSWORD: "${DOCKER_MYSQL_PASSWORD:-secret}"
+    command: >
+      --sql-mode="NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION"
+      --default-time-zone=${DOCKER_DB_TIMEZONE:-+08:00}
+      --max_allowed_packet=${DOCKER_DB_MAX_ALLOWED_PACKET:-512M}
+    ports:
+      - "${DOCKER_HOST_DB_PORT:-33060}:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${DOCKER_MYSQL_ROOT_PASSWORD:-secret}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  dbdata:
